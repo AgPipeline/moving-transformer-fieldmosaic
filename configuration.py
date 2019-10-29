@@ -11,7 +11,7 @@ TRANSFORMER_DESCRIPTION = 'GeoTIFF Field Mosaic Stitcher'
 TRANSFORMER_NAME = 'terra.geotiff.fieldmosaic'
 
 # The sensor associated with the transformer
-TRANSFORMER_SENSOR = 'rgb_fullfield'
+TRANSFORMER_SENSOR = 'stereoTop'
 
 # The transformer type (eg: 'rgbmask', 'plotclipper')
 TRANSFORMER_TYPE = 'fullfield'

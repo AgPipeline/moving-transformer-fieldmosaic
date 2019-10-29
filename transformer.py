@@ -9,6 +9,9 @@ import subprocess
 import shadeRemoval as shade
 
 import transformer_class    # pylint: disable=import-error
+import terrautils.lemnatec
+
+terrautils.lemnatec.SENSOR_METADATA_CACHE = os.path.dirname(os.path.realpath(__file__))
 
 class __internal__():
     """Internal use only class
@@ -56,7 +59,7 @@ class __internal__():
         bounds = kwargs['bounds']
 
         # Create VRT from every GeoTIFF
-        out_vrt = kwargs['out_vrt']
+        out_vrt = os.path.join(kwargs['out_dir'], kwargs['out_vrt'])
         logging.info("Creating VRT %s...", out_vrt)
         if out_vrt.endswith("_mask.vrt"):
             __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt)
@@ -67,7 +70,7 @@ class __internal__():
 
         # Omit _mask.vrt from 2%
         if not out_vrt.endswith('_mask.vrt'):
-            cur_out_file = kwargs['out_thumb']
+            cur_out_file = os.path.join(kwargs['out_dir'], kwargs['out_thumb'])
             logging.info("Converting VRT to %s...", cur_out_file)
             cmd = "gdal_translate -co COMPRESS=LZW -co BIGTIFF=YES -projwin %s -outsize %s%% %s%% '%s' '%s'" % \
                     (bounds, 2, 2, out_vrt, cur_out_file)
@@ -80,7 +83,7 @@ class __internal__():
         if not kwargs['thumb_only']:
             # Omit _mask.vrt and _nrmac.vrt from 10%
             if not (out_vrt.endswith('_mask.vrt') or out_vrt.endswith('_nrmac.vrt')):
-                cur_out_file = kwargs['out_medium']
+                cur_out_file = os.path.join(kwargs['out_dir'], kwargs['out_medium'])
                 logging.info("Converting VRT to %s...", cur_out_file)
                 cmd = "gdal_translate -co COMPRESS=LZW -co BIGTIFF=YES -projwin %s -outsize %s%% %s%% '%s' '%s'" % \
                         (bounds, 10, 10, out_vrt, cur_out_file)
@@ -91,7 +94,7 @@ class __internal__():
 
             # Omit _nrmac.vrt from 100%
             if not out_vrt.endswith('_nrmac.vrt'):
-                cur_out_file = kwargs['out_full']
+                cur_out_file = os.path.join(kwargs['out_dir'], kwargs['out_full'])
                 logging.info("Converting VRT to %s...", cur_out_file)
                 cmd = "gdal_translate -co COMPRESS=LZW -co BIGTIFF=YES -projwin %s '%s' '%s'" % \
                         (bounds, out_vrt, cur_out_file)
@@ -142,12 +145,12 @@ class __internal__():
         shade.copy_missing_tiles(out_dir, unite_tiles_dir, split)
 
         # Create output VRT from overlapped tiles
-        out_vrt = kwargs['out_vrt']
+        out_vrt = os.path.join(out_dir, kwargs['out_vrt'])
         shade.create_unite_tiles(unite_tiles_dir, out_vrt)
         files_created.append(out_vrt)
         sum_bytes += os.path.getsize(out_vrt)
 
-        cur_out_file = kwargs['out_thumb']
+        cur_out_file = os.path.join(out_dir, kwargs['out_thumb'])
         logging.info("Converting VRT to %s...", cur_out_file)
         cmd = "gdal_translate -projwin %s -outsize %s%% %s%% '%s' '%s'" % (bounds, 2, 2, out_vrt, cur_out_file)
         logging.debug("Thumbnail command: '%s'", cmd)
@@ -156,7 +159,7 @@ class __internal__():
         sum_bytes += os.path.getsize(cur_out_file)
 
         if not kwargs['thumb_only']:
-            cur_out_file = kwargs['out_medium']
+            cur_out_file = os.path.join(out_dir, kwargs['out_medium'])
             logging.info("Converting VRT to %s...", cur_out_file)
             cmd = "gdal_translate -projwin %s -outsize %s%% %s%% '%s' '%s'" % (bounds, 10, 10, out_vrt, cur_out_file)
             logging.debug("Medium command: '%s'", cmd)
@@ -164,7 +167,7 @@ class __internal__():
             files_created.append(cur_out_file)
             sum_bytes += os.path.getsize(cur_out_file)
 
-            cur_out_file = kwargs['out_full']
+            cur_out_file = os.path.join(out_dir, kwargs['out_full'])
             logging.info("Converting VRT to %s...", cur_out_file)
             cmd = "gdal_translate -projwin %s '%s' '%s'" % (bounds, out_vrt, cur_out_file)
             logging.debug("Full command: '%s'", cmd)
@@ -184,9 +187,10 @@ def add_parameters(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('--split', type=int, default=os.getenv('MOSAIC_SPLIT', '2'),
                         help='number of splits to use if --darker is to true')
     parser.add_argument('--thumb', action='store_true',
-                        help='whether to only generate a 2% thumbnail image')
-    parser.add_argument('mosaic_files', type=str, help='path to a text file containing a list of source file paths for the mosaic')
-    parser.add_argument('sensor', type=str, help='the name of the sensor associated with the metadata')
+                        help='whether to only generate a 2 percent thumbnail image')
+    parser.add_argument('mosaic_list_file', type=str, help='path to a text file containing a list of source file paths for the mosaic')
+    parser.add_argument('sensor', type=str,
+                        help='the name of the sensor associated with the metadata (stereoTop, flirIrCamera, scanner3DTop)')
     parser.add_argument('mosaic_bounds', type=str, help='the geographic bounds of the mosaic to generate (EPSG 4326 coordinates)')
 
 #pylint: disable=unused-argument
@@ -213,7 +217,7 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
         return {'code': -1000, 'error': msg}
 
     # Perform actual field stitching
-    out_filename = "fullfield_mosaic" + output_file_ext
+    out_filename = "fullfield_mosaic"
     out_png = out_filename + ".png"
 
     params = {
@@ -221,7 +225,7 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
         'bounds': transformer.args.mosaic_bounds,
         'split': transformer.args.split,
         'out_dir': check_md['working_folder'],
-        'file_list_path': transformer.args.mosaic_files,
+        'file_list_path': transformer.args.mosaic_list_file,
         'out_vrt': out_filename + '.vrt',
         'out_thumb': out_filename + "_thumb" + output_file_ext,
         'out_full': out_filename + output_file_ext,
@@ -232,7 +236,7 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
     else:
         (files_created, num_bytes) = __internal__.generate_darker_mosaic(**params)
 
-    if not transformer.args.thumb and os.path.isfile(params['out_medium']):
+    if not transformer.args.thumb and os.path.isfile(os.path.join(params['out_dir'], params['out_medium'])):
         # Create PNG thumbnail
         logging.info("Converting 10pct to %s...", out_png)
         cmd = "gdal_translate -of PNG %s %s" % (params['out_medium'], out_png)
