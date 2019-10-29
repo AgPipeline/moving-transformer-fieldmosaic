@@ -2,28 +2,28 @@
 """
 
 # The version number of the transformer
-TRANSFORMER_VERSION = '1.0'
+TRANSFORMER_VERSION = '2.0'
 
 # The transformer description
-TRANSFORMER_DESCRIPTION = ''
+TRANSFORMER_DESCRIPTION = 'GeoTIFF Field Mosaic Stitcher'
 
 # Short name of the transformer
-TRANSFORMER_NAME = ''
+TRANSFORMER_NAME = 'terra.geotiff.fieldmosaic'
 
 # The sensor associated with the transformer
-TRANSFORMER_SENSOR = ''
+TRANSFORMER_SENSOR = 'rgb_fullfield'
 
 # The transformer type (eg: 'rgbmask', 'plotclipper')
-TRANSFORMER_TYPE = ''
+TRANSFORMER_TYPE = 'fullfield'
 
 # The name of the author of the extractor
-AUTHOR_NAME = ''
+AUTHOR_NAME = 'Chris Schnaufer'
 
 # The email of the author of the extractor
-AUTHOR_EMAIL = ''
+AUTHOR_EMAIL = 'schnaufer@email.arizona.edu'
 
 # Contributors to this transformer
-CONTRUBUTORS = ['Max Burnette', 'Zongyang Li', 'Todd Nicholson']
+CONTRUBUTORS = ['Max Burnette']
 
 # Reposity URI of where the source code lives
-REPOSITORY = ''
+REPOSITORY = 'https://github.com/AgPipeline/transformer-fieldmosaic.git'
