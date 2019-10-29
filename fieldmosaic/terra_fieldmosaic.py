@@ -33,7 +33,7 @@ class FullFieldMosaicStitcher(TerrarefExtractor):
         add_local_arguments(self.parser)
 
         # parse command line and load default logging configuration
-        self.setup(sensor='fullfield')
+        self.setup(sensor='rgb_fullfield')
 
         # assign local arguments
         self.darker = self.args.darker
