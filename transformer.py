@@ -6,10 +6,11 @@ import logging
 import os
 import subprocess
 
+import terrautils.lemnatec
+
 import shadeRemoval as shade
 
 import transformer_class    # pylint: disable=import-error
-import terrautils.lemnatec
 
 terrautils.lemnatec.SENSOR_METADATA_CACHE = os.path.dirname(os.path.realpath(__file__))
 
@@ -239,10 +240,13 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
     if not transformer.args.thumb and os.path.isfile(os.path.join(params['out_dir'], params['out_medium'])):
         # Create PNG thumbnail
         logging.info("Converting 10pct to %s...", out_png)
-        cmd = "gdal_translate -of PNG %s %s" % (params['out_medium'], out_png)
+        png_file = os.path.join(check_md['working_folder'], out_png)
+        cmd = "gdal_translate -of PNG %s %s" % \
+                (os.path.join(check_md['working_folder'], params['out_medium']), png_file)
+        logging.debug("PNG command: '%s'", cmd)
         subprocess.call(cmd, shell=True)
-        files_created.append(out_png)
-        num_bytes += os.path.getsize(out_png)
+        files_created.append(png_file)
+        num_bytes += os.path.getsize(png_file)
 
     # Setup the return list of files
     files_list = []
