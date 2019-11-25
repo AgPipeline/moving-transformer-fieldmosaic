@@ -37,7 +37,8 @@ class __internal__():
         vrt_path = os.path.join(base_dir, out_vrt)
         cmd = 'gdalbuildvrt -srcnodata "-99 -99 -99" -overwrite -input_file_list ' + file_list +' ' + vrt_path
         logging.debug("Running Virtual Tiff command: '%s'", cmd)
-        os.system(cmd)
+        cmd_result = os.system(cmd)
+        logging.debug(f'Result of Virtual Tiff command: {cmd_result}')
 
     @staticmethod
     def generate_single_mosaic(**kwargs) -> list:
@@ -60,12 +61,10 @@ class __internal__():
         bounds = kwargs['bounds']
 
         # Create VRT from every GeoTIFF
+        out_vrt_filename = kwargs['out_vrt']
         out_vrt = os.path.join(kwargs['out_dir'], kwargs['out_vrt'])
         logging.info("Creating VRT %s...", out_vrt)
-        if out_vrt.endswith("_mask.vrt"):
-            __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt)
-        else:
-            __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt)
+        __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt_filename)
         files_created.append(out_vrt)
         sum_bytes += os.path.getsize(out_vrt)
 
