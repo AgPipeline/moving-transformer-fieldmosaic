@@ -204,6 +204,8 @@ def add_parameters(parser: argparse.ArgumentParser) -> None:
                         help='number of splits to use if --darker is to true')
     parser.add_argument('--thumb', action='store_true',
                         help='whether to only generate a 2 percent thumbnail image')
+    parser.add_argument('--mask', action='store_true',
+                        help='the source images are masked; create mosaic with alpha channel mask')
     parser.add_argument('mosaic_list_file', type=str, help='path to a text file containing a list of source file paths for the mosaic')
     parser.add_argument('sensor', type=str,
                         help='the name of the sensor associated with the metadata (stereoTop, flirIrCamera, scanner3DTop)')
@@ -234,6 +236,8 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
 
     # Perform actual field stitching
     out_filename = "fullfield_mosaic"
+    if transformer.args.mask:
+        out_filename = out_filename + "_mask"
     out_png = out_filename + ".png"
 
     params = {
