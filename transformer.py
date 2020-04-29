@@ -22,26 +22,31 @@ class __internal__():
         """
 
     @staticmethod
-    def create_vrt_permanent(base_dir: str, file_list: str, out_vrt: str = 'virtualTif.vrt') -> None:
+    def create_vrt_permanent(base_dir: str, file_list: str, out_vrt: str = 'virtualTif.vrt', alpha: bool = False) -> None:
         """Creates a VRT file to allow further processing of files
         Arguments:
             base_dir: the path to the working folder
             file_list: the path to the file containing the list of files to process
             out_vrt: the name of the vrt file to create
+            alpha: set to True to generate an alpha layer mask from the image
         Notes:
-            Ported from original full_dat_to_tiles.py file
+            Pure black pixels will create a full transparent value, all other values have no transparency at all.
+            Ported from original full_day_to_tiles.py file
         """
         # Create virtual tif for the files in this folder
         # Build a virtual TIF that combines all of the tifs that we just created
         logging.debug("Creating virtual TIF: %s", out_vrt)
         vrt_path = os.path.join(base_dir, out_vrt)
-        cmd = 'gdalbuildvrt -srcnodata "-99 -99 -99" -overwrite -input_file_list ' + file_list +' ' + vrt_path
+        if alpha:
+            cmd = 'gdalbuildvrt -addalpha -srcnodata "-99 -99 -99" -overwrite -input_file_list ' + file_list + ' ' + vrt_path
+        else:
+            cmd = 'gdalbuildvrt -srcnodata "-99 -99 -99" -overwrite -input_file_list ' + file_list +' ' + vrt_path
         logging.debug("Running Virtual Tiff command: '%s'", cmd)
         cmd_result = os.system(cmd)
-        logging.debug(f'Result of Virtual Tiff command: {cmd_result}')
+        logging.debug('Result of Virtual Tiff command: %s', cmd_result)
 
     @staticmethod
-    def generate_single_mosaic(**kwargs) -> list:
+    def generate_single_mosaic(**kwargs) -> tuple:
         """Creates a mosaic from a list of files
         Arguments (all are referenced as keyword arguments and therefore must be explicitly named):
             thumb_only: a boolean value indicating only thumbnails get generated
@@ -64,7 +69,10 @@ class __internal__():
         out_vrt_filename = kwargs['out_vrt']
         out_vrt = os.path.join(kwargs['out_dir'], kwargs['out_vrt'])
         logging.info("Creating VRT %s...", out_vrt)
-        __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt_filename)
+        if out_vrt.endswith("_mask.vrt"):
+            __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt_filename, alpha=True)
+        else:
+            __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt_filename)
         files_created.append(out_vrt)
         sum_bytes += os.path.getsize(out_vrt)
 
@@ -103,10 +111,10 @@ class __internal__():
                 files_created.append(cur_out_file)
                 sum_bytes += os.path.getsize(cur_out_file)
 
-        return (files_created, sum_bytes)
+        return files_created, sum_bytes
 
     @staticmethod
-    def generate_darker_mosaic(**kwargs) -> list:
+    def generate_darker_mosaic(**kwargs) -> tuple:
         """Creates a darkened mosaic from a list of files
         Arguments (all are referenced as keyword arguments and therefore must be explicitly named):
             thumb_only: a boolean value indicating only thumbnails get generated
@@ -128,6 +136,14 @@ class __internal__():
         bounds = kwargs['bounds']
         out_dir = kwargs['out_dir']
         split = kwargs['split']
+
+        # Create VRT from every GeoTIFF
+        out_vrt_filename = kwargs['out_vrt']
+        out_vrt = os.path.join(kwargs['out_dir'], kwargs['out_vrt'])
+        logging.info("Creating VRT %s...", out_vrt)
+        __internal__.create_vrt_permanent(kwargs['out_dir'], kwargs['file_list_path'], out_vrt_filename)
+        files_created.append(out_vrt)
+        sum_bytes += os.path.getsize(out_vrt)
 
         # Split full file_list_path into parts according to split number
         shade.split_tif_list(kwargs['file_list_path'], out_dir, split)
@@ -175,7 +191,7 @@ class __internal__():
             files_created.append(cur_out_file)
             sum_bytes += os.path.getsize(cur_out_file)
 
-        return (files_created, sum_bytes)
+        return files_created, sum_bytes
 
 def add_parameters(parser: argparse.ArgumentParser) -> None:
     """Adds parameters
@@ -193,7 +209,6 @@ def add_parameters(parser: argparse.ArgumentParser) -> None:
                         help='the name of the sensor associated with the metadata (stereoTop, flirIrCamera, scanner3DTop)')
     parser.add_argument('mosaic_bounds', type=str, help='the geographic bounds of the mosaic to generate (EPSG 4326 coordinates)')
 
-#pylint: disable=unused-argument
 def perform_process(transformer: transformer_class.Transformer, check_md: dict, transformer_md: dict, full_md: dict) -> dict:
     """Performs the processing of the data
     Arguments:
@@ -201,6 +216,7 @@ def perform_process(transformer: transformer_class.Transformer, check_md: dict, 
     Return:
         Returns a dictionary with the results of processing
     """
+    # pylint: disable=unused-argument
     sensor = transformer.args.sensor
     if sensor == 'stereoTop':
         sensor_lookup = 'rgb_fullfield'
